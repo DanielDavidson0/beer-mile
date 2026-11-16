@@ -260,7 +260,7 @@ function renderMapTab() {
   if (!isBase(m)) h += `<div class="msg">${m.baseId ? `Your version of ${esc((getMap(m.baseId) || {}).name || "a map")}` : "Your route"} · ${m.stops.length} stops</div>`;
   if (pref.view === "geo") {
     h += `<div id="geonote" class="msg hide"></div><div class="geowrap"><div id="lmap"></div></div>
-      <footer>Map data © OpenStreetMap contributors, tiles © CARTO. Stop locations come from OpenStreetMap and may be approximate.</footer>`;
+      <footer>Map data and tiles © OpenStreetMap contributors. Stop locations come from OpenStreetMap and may be approximate.</footer>`;
   } else {
     h += renderLine(m) + `<footer>Tap any stop for details, past drinks and directions. Opening times change, so check before going.</footer>`;
   }
@@ -274,7 +274,8 @@ function paintMaps() {
 }
 function leafletOK() { return typeof L !== "undefined" && L.map; }
 function baseTiles(map) {
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {maxZoom: 20, subdomains: "abcd", attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>'}).addTo(map);
+  // Standard OpenStreetMap tiles (no key needed), darkened with CSS to suit the app
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
 }
 function drawGeo() {
   const el = $("#lmap"); if (!el) return;
@@ -691,7 +692,7 @@ function settingsSheet(msg) {
     <label class="f">Import a backup<input type="file" id="impfile" accept=".json,application/json"></label>
     <p class="c" style="margin-top:6px">Importing adds trips, players and maps from the file. Anything with the same ID is replaced by the file's copy.</p>`;
   if (msg) h += `<div class="msg" style="margin:12px 0 0">${esc(msg)}</div>`;
-  h += `<h3>About</h3><p class="c">Bar locations and searches use OpenStreetMap (© OpenStreetMap contributors). Map tiles © CARTO.</p>`;
+  h += `<h3>About</h3><p class="c">Bar locations and searches use OpenStreetMap (© OpenStreetMap contributors).</p>`;
   openSheet(h);
 }
 function exportJSON() { return JSON.stringify({app: "beer-mile-line", exported: new Date().toISOString(), data: D}, null, 1); }
