@@ -87,7 +87,7 @@ const activeTrip = () => [...D.trips].sort((a, b) => (b.date || "").localeCompar
 const sortedTrips = () => [...D.trips].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
 /* ============================ OpenStreetMap ============================ */
-const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
+const OVERPASS = ["https://overpass.private.coffee/api/interpreter", "https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
 async function overpass(q) {
   let lastErr;
   for (const u of OVERPASS) {
@@ -274,8 +274,20 @@ function paintMaps() {
 }
 function leafletOK() { return typeof L !== "undefined" && L.map; }
 function baseTiles(map) {
-  // Standard OpenStreetMap tiles (no key needed), darkened with CSS to suit the app
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
+  // Simple dark-grey base map (roads and water only) with a light street-name layer on top.
+  // If those tiles fail to load, fall back to standard OpenStreetMap tiles, darkened with CSS.
+  const esri = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/";
+  const attr = 'Tiles © Esri — Esri, HERE, Garmin, © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+  const base = L.tileLayer(esri + "World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", {maxZoom: 16, maxNativeZoom: 16, attribution: attr}).addTo(map);
+  const labels = L.tileLayer(esri + "World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}", {maxZoom: 16, maxNativeZoom: 16, opacity: .75}).addTo(map);
+  map.setMaxZoom(18);
+  let fails = 0, swapped = false;
+  base.on("tileerror", () => {
+    if (swapped || ++fails < 4) return; swapped = true;
+    map.removeLayer(base); map.removeLayer(labels);
+    map.getContainer().classList.add("osmfallback");
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
+  });
 }
 function drawGeo() {
   const el = $("#lmap"); if (!el) return;
@@ -695,13 +707,14 @@ function settingsSheet(msg) {
   h += `<h3>About</h3><p class="c">Bar locations and searches use OpenStreetMap (© OpenStreetMap contributors).</p>`;
   openSheet(h);
 }
-function exportJSON() { return JSON.stringify({app: "beer-mile-line", exported: new Date().toISOString(), data: D}, null, 1); }
+function exportJSON() { return JSON.stringify({app: "beer-mile-line", exported: new Date().toISOString(), data: D, geo: GEO.stops}, null, 1); }
 function importJSON(txt) {
   const j = JSON.parse(txt); const d = j.data || j;
   if (!d || !Array.isArray(d.trips)) throw new Error("That file isn't a Beer Mile backup.");
   Object.assign(D.roster, d.roster || {});
   (d.trips || []).forEach(t => { const i = D.trips.findIndex(x => x.id === t.id); if (i >= 0) D.trips[i] = t; else D.trips.push(t); });
   (d.variants || []).forEach(v => { const i = D.variants.findIndex(x => x.id === v.id); if (i >= 0) D.variants[i] = v; else D.variants.push(v); });
+  if (j.geo) { Object.assign(GEO.stops, j.geo); saveGeo(); }
   save(); return (d.trips || []).length;
 }
 
@@ -723,7 +736,7 @@ document.addEventListener("click", async e => {
   if (el.dataset.tab) { if (builder && el.dataset.tab !== "map") { builder = null; } tab = el.dataset.tab; tripView = null; render(); toTop(); return; }
   if (el.dataset.venue) { venueSheet(el.dataset.venue); return; }
   if (el.dataset.trip) { tab = "trips"; tripView = el.dataset.trip; edit = null; builder = null; render(); toTop(); return; }
-  if (el.dataset.pick) { pref.mapId = el.dataset.pick; pref.rev = false; savePref(); closeSheet(); render(); toTop(); return; }
+  if (el.dataset.pick) { pref.mapId = el.dataset.pick; pref.rev = false; savePref(); closeSheet(); render(); toTop(); prefetchGeo(); return; }
   if (el.dataset.fst) { readForm(); form.status = el.dataset.fst; renderForm(); return; }
   if (el.dataset.by) { readForm(); const d = form.drinks[+el.closest(".drow").dataset.i]; const p = el.dataset.by; d.by = d.by || []; d.by = d.by.includes(p) ? d.by.filter(x => x !== p) : [...d.by, p]; renderForm(); return; }
   if (el.dataset.ns) { readNtf(); ntf.start = el.dataset.ns; newTripSheet(); return; }
@@ -853,5 +866,13 @@ document.addEventListener("click", async e => {
 })();
 
 /* boot */
+/* find stop locations in the background so the Map view is ready when opened */
+function prefetchGeo() {
+  const m = curMap();
+  if (!navigator.onLine || !m.stops.some(s => !coordOf(s))) return;
+  if (GEO.tried[m.id] && Date.now() - GEO.tried[m.id] < 864e5) return;
+  setTimeout(() => locateStops(m), 800);
+}
 render();
+prefetchGeo();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});

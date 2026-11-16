@@ -265,4 +265,4 @@ body{padding-top:0}
 .msg{line-height:1.4}
 
 /* darken the standard OpenStreetMap tiles */
-.leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.6)}
+.osmfallback .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.75) saturate(.3)}

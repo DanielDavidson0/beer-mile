@@ -41,7 +41,8 @@ The 7 March 2026 trip is built in, so the app isn't empty the first time you ope
 
 ## Good to know
 - Bar locations and searches come from **OpenStreetMap** (free; © OpenStreetMap contributors). New or oddly named bars may be missing or slightly misplaced. You can add them by name in the editor.
-- The street map uses the standard **OpenStreetMap** tiles, darkened to match the app. They're free for light personal use.
+- The street map uses Esri's plain dark-grey base map (free with attribution for light use). If that doesn't load it falls back to standard OpenStreetMap tiles, darkened.
+- Stop locations are looked up once per phone and remembered. Exported backups include them.
 - Venue lists were researched in November 2026. Some places (noted in their descriptions) may have closed or changed hours, so check before you go.
 - The Line view works offline once the app has been opened once. The street map and bar searches need a connection.
 
